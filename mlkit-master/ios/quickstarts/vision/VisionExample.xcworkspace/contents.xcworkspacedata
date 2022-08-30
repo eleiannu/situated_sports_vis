@@ -2,6 +2,9 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:../../../../ETH/Thesis/Charts-master-2/Charts.xcodeproj">
+   </FileRef>
+   <FileRef
       location = "group:VisionExample.xcodeproj">
    </FileRef>
    <FileRef

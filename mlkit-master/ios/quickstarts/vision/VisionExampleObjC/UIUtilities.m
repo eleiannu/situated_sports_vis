@@ -329,7 +329,6 @@ NS_ASSUME_NONNULL_BEGIN
                                      width:lineWidth];
     }
   }
-    NSLog(@"%f", pose.landmarks[0].position.x);
   for (MLKPoseLandmark *landmark in pose.landmarks) {
     CGPoint position = positionTransformationBlock(landmark.position);
     [UIUtilities addCircleAtPoint:position
