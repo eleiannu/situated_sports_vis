@@ -22,29 +22,6 @@ import UIKit
 import Charts
 import CoreMotion
 
-class PieChart : UIView {
-
-    override func draw(_ rect: CGRect) {
-
-        drawSlice(rect: rect, startPercent: 0, endPercent: 30, color: UIColor(red: 0.049, green: 0.8, blue: 0.3, alpha: 1))
-        drawSlice(rect: rect, startPercent: 30, endPercent: 40, color: UIColor(red: 0.039, green: 0.27, blue: 0.13, alpha: 1))
-    }
-
-    private func drawSlice(rect: CGRect, startPercent: CGFloat, endPercent: CGFloat, color: UIColor) {
-        let center = CGPoint(x: rect.origin.x + rect.width / 2, y: rect.origin.y + rect.height / 2)
-        let radius = min(rect.width, rect.height) / 2
-        let startAngle = startPercent / 100 * CGFloat.pi * 2 - CGFloat.pi
-        let endAngle = endPercent / 100 * CGFloat.pi * 2 - CGFloat.pi
-        let path = UIBezierPath()
-        path.move(to: center)
-        path.addArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
-        path.close()
-        color.setFill()
-        path.fill()
-    }
-}
-
-
 @objc(CameraViewController)
 class CameraViewController: UIViewController, ChartViewDelegate{
     // array to save last movement
@@ -449,11 +426,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
             
             UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightKnee.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(legsAngleApprox).description, width: 50)
             UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(bodyAngleApprox).description, width: 50)
-              
-              let pieChart = PieChart(frame: CGRect(x: 10.0, y: 10.0, width: 200.0, height: 200.0))
-              pieChart.backgroundColor = .clear
-              pieChart.draw(CGRect(x: 0.0, y: 0.0, width: 200.0, height: 200.0))
-              poseOverlayView.addSubview(pieChart)
               
               if bodyAngle > currMaxBodyAngle {
                   currMaxBodyAngle = bodyAngle
