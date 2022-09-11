@@ -96,14 +96,15 @@ public class UIUtilities {
     to view: UIView,
     color: UIColor,
     text: String,
-    width: CGFloat
+    width: CGFloat,
+    bgColor: UIColor
   ) {
     let label = UILabel(frame: CGRect(x: 0, y: 0, width: width, height: 21))
     label.center = point
     label.textAlignment = .center
     label.text = text
-    label.backgroundColor = UIColor.white
-    view.addSubview(label)
+    label.textColor = color
+    label.backgroundColor = bgColor
     if (UIDevice.current.orientation == .portraitUpsideDown) {
         label.transform = CGAffineTransform(rotationAngle: CGFloat.pi)
     }
@@ -113,7 +114,111 @@ public class UIUtilities {
     else if (UIDevice.current.orientation == .landscapeRight) {
         label.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
     }
+    view.addSubview(label)
   }
+    
+    public static func addLabel2(
+      atPoint point: CGPoint,
+      to view: UIView,
+      color: UIColor,
+      text: String,
+      width: CGFloat,
+      bgColor: UIColor
+    ) -> UILabel {
+      let label = UILabel(frame: CGRect(x: 0, y: 0, width: width, height: 21))
+      label.center = point
+      label.textAlignment = .center
+      label.text = text
+      label.textColor = color
+      label.backgroundColor = bgColor
+      if (UIDevice.current.orientation == .portraitUpsideDown) {
+          label.transform = CGAffineTransform(rotationAngle: CGFloat.pi)
+      }
+      else if (UIDevice.current.orientation == .landscapeLeft) {
+          label.transform = CGAffineTransform(rotationAngle: CGFloat.pi / 2)
+      }
+      else if (UIDevice.current.orientation == .landscapeRight) {
+          label.transform = CGAffineTransform(rotationAngle: -CGFloat.pi / 2)
+      }
+      view.addSubview(label)
+      return label
+    }
+
+    public static func addPieChart(
+      to view: UIView,
+      startingAt startPercent: CGFloat,
+      endingAt endPercent: CGFloat,
+      radius: CGFloat,
+      fillColor: UIColor,
+      strokeColor: UIColor,
+      strokeSize: CGFloat,
+      rect: CGRect,
+      center: CGPoint,
+      bgColor: UIColor,
+      mirror: Bool
+    ) {
+        let startAngle = startPercent / 100 * CGFloat.pi * 2 - CGFloat.pi
+        let endAngle = endPercent / 100 * CGFloat.pi * 2 - CGFloat.pi
+        let path = UIBezierPath()
+        if strokeColor != .black.withAlphaComponent(0.5) {
+            path.move(to: center)
+        }
+        path.addArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+        if strokeColor != .black.withAlphaComponent(0.5) {
+            path.close()
+        }
+        
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.path = path.cgPath
+        if strokeColor != .clear{
+            shapeLayer.strokeColor = strokeColor.cgColor
+        }
+        shapeLayer.fillColor = fillColor.cgColor
+        shapeLayer.lineWidth = strokeSize
+        
+        let shapeView = UIView(frame: rect)
+        shapeView.layer.addSublayer(shapeLayer)
+
+        shapeView.backgroundColor = bgColor
+        
+        if mirror {
+            shapeView.transform = CGAffineTransform(scaleX: -1, y: 1)
+        }
+        
+        view.addSubview(shapeView)
+    }
+    
+    public static func addArc(
+      to view: UIView,
+      center: CGPoint,
+      startingAt startPercent: CGFloat,
+      endingAt endPercent: CGFloat,
+      fillColor: UIColor,
+      strokeColor: UIColor
+    ) {
+        let center = CGPoint(x: center.x - 10, y: center.y - 10)
+        let rect = CGRect(x: 10.0, y: 10.0, width: 220.0, height: 220.0)
+        let radius = min(rect.width-20, rect.height-20) / 4
+        let startAngle = startPercent / 100 * CGFloat.pi * 2 - CGFloat.pi
+        let endAngle = endPercent / 100 * CGFloat.pi * 2 - CGFloat.pi
+        let path = UIBezierPath()
+        path.move(to: center)
+        path.addArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
+        path.close()
+        
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.path = path.cgPath
+        if strokeColor != .clear{
+            shapeLayer.strokeColor = strokeColor.cgColor
+        }
+        shapeLayer.fillColor = fillColor.cgColor
+        shapeLayer.lineWidth = 2.0
+        
+        let shapeView = UIView(frame: rect)
+        shapeView.layer.addSublayer(shapeLayer)
+
+        view.addSubview(shapeView)
+    }
 
   public static func imageOrientation(
     fromDevicePosition devicePosition: AVCaptureDevice.Position = .back

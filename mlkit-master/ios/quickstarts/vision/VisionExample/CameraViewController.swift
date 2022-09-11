@@ -70,13 +70,34 @@ class CameraViewController: UIViewController, ChartViewDelegate{
     private var currMinBodyAngle: CGFloat = 370.0
     // current max body angle in this stroke
     private var currMaxBodyAngle: CGFloat = 0.0
+    // previous max body angle in this stroke
+    private var prevMaxBodyAngle: CGFloat = 0.0
     // body angle at 90 degrees legs angle
     private var angleAt90: CGFloat = 0.0
+    // green on red based on whether the elbows bent too early
+    private var colorArc: UIColor = .clear
+    // green on red based on whether the body opened too early
+    private var colorArc2: UIColor = .clear
+    
+    // label that one can click to get information about elbow's angle
+    @IBOutlet weak var elbowLabel: UILabel!
+    // label that contains info about elbow's angle
+    @IBOutlet weak var elbowLabelLong: UILabel!
+    // boolean that tells whether you have to display the colored arc on the elbow
+    private var showElbow: Bool = false
+    
+    // label that one can click to get information about body opening
+    @IBOutlet weak var hipLabel: UILabel!
+    // label that contains info about body opening
+    @IBOutlet weak var hipLabelLong: UILabel!
+    // boolean that tells whether you have to display the colored arc on the hip
+    private var showHip: Bool = false
     
     @IBOutlet weak var strokeCountLabel: UILabel!
     private var driveLengthText: String = ""
     @IBOutlet weak var driveLengthLabel: UILabel!
     
+    //variables needed to fill bottom graphs
     private var timesCount : Int = 10 // maximum number of previous drive speeds graphed in driveSpeedGraph
     private var strokeRateCounts : Int = 10 // maximum number of previous drive speeds graphed in strokeRateGraph
     private var minAnglesCounts : Int = 10
@@ -150,47 +171,53 @@ class CameraViewController: UIViewController, ChartViewDelegate{
   override func viewDidLoad() {
     super.viewDidLoad()
       
-    self.strokeRateStackView.isHidden = true
-    self.timesStackView.isHidden = true
-    self.anglesStackView.isHidden = true
-    self.timesGraphLabel.text = "Time per stroke"
-    self.strokeRateGraphLabel.text = "Strokes per minute"
-    self.anglesGraphLabel.text = "Min and Max body angle"
+      // initializing elbow label
+      self.elbowLabel.text = "Elbow angle +"
+      self.elbowLabelLong.text = "Start rowing"
+      self.elbowLabel.textColor = .black
+      self.elbowLabelLong.textColor = .black
+      self.elbowLabel.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+      self.elbowLabelLong.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+      self.elbowLabelLong.isHidden = true
       
+      // initializing body opening label
+      self.hipLabel.text = "Body opening +"
+      self.hipLabelLong.text = "Start rowing"
+      self.hipLabel.textColor = .black
+      self.hipLabelLong.textColor = .black
+      self.hipLabel.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+      self.hipLabelLong.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+      self.hipLabelLong.isHidden = true
       
+      // initializing bottom graphs
+      self.anglesLabel.isHidden = true
+      self.strokeRateStackView.isHidden = true
+      self.timesStackView.isHidden = true
+      self.anglesStackView.isHidden = true
+      self.timesGraphLabel.text = "Time per stroke"
+      self.strokeRateGraphLabel.text = "Strokes per minute"
+      self.anglesGraphLabel.text = "Min and Max body angle"
+      
+      // times graph
       timesGraph.chartDescription.text = "Drive Speed Over Time"
       timesGraph.xAxis.drawGridLinesEnabled = false
       timesGraph.xAxis.enabled = false
       timesGraph.legend.enabled = false
       timesGraph.minOffset = 20
       
-      
+      // angles graph
       anglesGraph.chartDescription.text = "Angles Over Time"
       anglesGraph.xAxis.drawGridLinesEnabled = false
       anglesGraph.xAxis.enabled = false
       anglesGraph.legend.enabled = false
       anglesGraph.minOffset = 20
       
-      
+      // stroke rate graph
       strokeRateGraph.chartDescription.text = "Stroke Rate Over Time"
       strokeRateGraph.xAxis.drawGridLinesEnabled = false
       strokeRateGraph.xAxis.enabled = false
       strokeRateGraph.legend.enabled = false
       strokeRateGraph.minOffset = 20
-      
-    self.addGesture()
-    self.addGesture2()
-    self.addGesture3()
-    self.addGesture4()
-    self.addGesture5()
-    self.addGesture6()
-     
-    previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
-    setUpPreviewOverlayView()
-    setUpAnnotationOverlayView()
-    setUpCaptureSessionOutput()
-    setUpCaptureSessionInput()
-      
       
       timesLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
       strokeRateLabel.backgroundColor = UIColor.black.withAlphaComponent(0.6)
@@ -205,6 +232,22 @@ class CameraViewController: UIViewController, ChartViewDelegate{
       self.timesGraphLabel.backgroundColor = UIColor.white.withAlphaComponent(0.9)
       self.strokeRateGraphLabel.backgroundColor = UIColor.white.withAlphaComponent(0.9)
       self.anglesGraphLabel.backgroundColor = UIColor.white.withAlphaComponent(0.9)
+      
+      // adding tap gestures to labels
+      self.addGesture()
+      self.addGesture2()
+      self.addGesture3()
+      self.addGesture4()
+      self.addGesture5()
+      self.addGesture6()
+      self.addGestureElbow()
+      self.addGestureHip()
+     
+      previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+      setUpPreviewOverlayView()
+      setUpAnnotationOverlayView()
+      setUpCaptureSessionOutput()
+      setUpCaptureSessionInput()
       
   }
     
@@ -291,7 +334,51 @@ class CameraViewController: UIViewController, ChartViewDelegate{
            self.anglesStackView.isHidden = !self.anglesStackView.isHidden
            self.anglesLabel.isHidden = !self.anglesLabel.isHidden
        }
+    
+    
+      func addGestureElbow() {
+
+             let tap = UITapGestureRecognizer(target: self, action: #selector(self.elbowLabelTapped(_:)))
+             tap.numberOfTapsRequired = 1
+          self.elbowLabel.isUserInteractionEnabled = true
+          self.elbowLabel.addGestureRecognizer(tap)
+         }
      
+    @objc
+    func elbowLabelTapped(_ tap: UITapGestureRecognizer) {
+        
+        if self.elbowLabel.text == "Elbow angle -" {
+            self.elbowLabel.text = "Elbow angle +"
+            self.showElbow = false
+        }
+        else {
+            self.elbowLabel.text = "Elbow angle -"
+            self.showElbow = true
+        }
+        self.elbowLabelLong.isHidden = !self.elbowLabelLong.isHidden
+       }
+    
+    func addGestureHip() {
+
+           let tap = UITapGestureRecognizer(target: self, action: #selector(self.hipLabelTapped(_:)))
+           tap.numberOfTapsRequired = 1
+        self.hipLabel.isUserInteractionEnabled = true
+        self.hipLabel.addGestureRecognizer(tap)
+       }
+   
+  @objc
+  func hipLabelTapped(_ tap: UITapGestureRecognizer) {
+      
+      if self.hipLabel.text == "Body opening -" {
+          self.hipLabel.text = "Body opening +"
+          self.showHip = false
+      }
+      else {
+          self.hipLabel.text = "Body opening -"
+          self.showHip = true
+      }
+      self.hipLabelLong.isHidden = !self.hipLabelLong.isHidden
+     }
 
   override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(animated)
@@ -341,8 +428,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
       //updateStrokeRateGraph(time: 0.0, currStrokeRate: 0.0)
       //updateDriveSpeedGraph(time: 0.0, currDriveSpeed: 0.0)
      
-      
-      
     if let poseDetector = self.poseDetector {
       var poses: [Pose]
       do {
@@ -372,7 +457,7 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                   }
                   else{
                       startRecording = false
-                      //self.isRecordingLabel.text = "stopped recording"
+                      self.isRecordingLabel.text = "stopped recording"
                   }
               }
           }
@@ -411,21 +496,87 @@ class CameraViewController: UIViewController, ChartViewDelegate{
             }
           )
             
+            // Computing useful points
             let rightKnee = pose.landmark(ofType: PoseLandmarkType.rightKnee)
             let rightHip = pose.landmark(ofType: PoseLandmarkType.rightHip)
-            
+            let rightShoulder = pose.landmark(ofType: PoseLandmarkType.rightShoulder)
+            let rightElbow = pose.landmark(ofType: PoseLandmarkType.rightElbow)
+            let rightWrist = pose.landmark(ofType: PoseLandmarkType.rightWrist)
+              
+            // Computing legs, body and elbow angle
             legsAngle = self.angle(firstLandmark: rightHip, midLandmark: rightKnee, lastLandmark: pose.landmark(ofType: PoseLandmarkType.rightAnkle))
             bodyAngle = self.angle(firstLandmark: pose.landmark(ofType: PoseLandmarkType.rightShoulder), midLandmark: rightHip, lastLandmark: rightKnee)
+            let elbowAngle = self.angle(firstLandmark: rightWrist, midLandmark: rightElbow, lastLandmark: rightShoulder)
               
+              
+              
+            // Displaying arc on elbow angle in red if wrong, green if right
+              if self.showElbow {
+              let c1 = rightElbow.position.x - rightShoulder.position.x
+              let c2 = rightElbow.position.y - rightShoulder.position.y
+              let arcAngle = 90 + (atan(c2/c1) * (180 / Double.pi))
+              let c3 = rightElbow.position.x - rightWrist.position.x
+              let c4 = rightElbow.position.y - rightWrist.position.y
+              var arcAngle2 = 90 + (atan(c4/c3) * (180 / Double.pi))
+              if c3 < 0{
+                  arcAngle2 = 180 + arcAngle2
+              }
+              
+              if !isGrowing && legsAngle < 120 && elbowAngle < 155 {
+                  colorArc = .red
+                  self.elbowLabelLong.text = "Elbows bent too early"
+                  self.elbowLabelLong.textColor = .red
+
+              }
+              else if !isGrowing && legsAngle < 120 && elbowAngle >= 155 {
+                  colorArc = .green
+                  self.elbowLabelLong.text = "Elbows bent on time"
+                  self.elbowLabelLong.textColor = UIColor(red: 0.10, green: 0.60, blue: 0.40, alpha: 1)
+              }
+              
+              if (!isGrowing){
+                  UIUtilities.addPieChart(to: poseOverlayView, startingAt: arcAngle/3.60, endingAt: arcAngle2/3.60, radius: 50, fillColor: colorArc.withAlphaComponent(0.5), strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 10.0, y: 10.0, width: 100.0, height: 100.0), center: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: rightElbow.position, width: width, height: height).x - 10, y: strongSelf.normalizedPoint(fromVisionPoint: rightElbow.position, width: width, height: height).y - 10), bgColor: .clear, mirror: false)
+              }
+              }
+              
+              
+              // Displaying arc on legs angle in red if wrong, green if right
+              if self.showHip {
               if (legsAngle > 85 && legsAngle < 95 && isStart){
                   angleAt90 = bodyAngle
               }
+              let c5 = rightShoulder.position.x - rightHip.position.x
+              let c6 = rightShoulder.position.y - rightHip.position.y
+              let arcAngle3 = 90 + (atan(c6/c5) * (180 / Double.pi))
+              if angleAt90 > 40{
+                  colorArc2 = .red
+                  self.hipLabelLong.text = "Body opened too early"
+                  self.hipLabelLong.textColor = .red
+              }
+              else{
+                  colorArc2 = .green
+                  self.hipLabelLong.text = "Body opened on time"
+                  self.hipLabelLong.textColor = UIColor(red: 0.10, green: 0.60, blue: 0.40, alpha: 1)
+              }
+              if (!isGrowing){
+                  UIUtilities.addPieChart(to: poseOverlayView, startingAt: arcAngle3/3.60, endingAt: (arcAngle3 + bodyAngle)/3.60, radius: 50, fillColor: colorArc2.withAlphaComponent(0.5), strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 10.0, y: 10.0, width: 100.0, height: 100.0), center: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height).x - 10, y: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height).y - 10), bgColor: .clear, mirror: false)
+              }
+              }
               
+
+
+              
+              
+
+             
+            // approximating legs and body angles
             legsAngleApprox = (5 * CGFloat(Int(legsAngle/5)))
             bodyAngleApprox = (5 * CGFloat(Int(bodyAngle/5)))
             
-            UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightKnee.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(legsAngleApprox).description, width: 50)
-            UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(bodyAngleApprox).description, width: 50)
+            //UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightKnee.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(legsAngleApprox).description, width: 50)
+            //UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(bodyAngleApprox).description, width: 50)
+              
+             
               
               if bodyAngle > currMaxBodyAngle {
                   currMaxBodyAngle = bodyAngle
@@ -433,6 +584,36 @@ class CameraViewController: UIViewController, ChartViewDelegate{
               if bodyAngle < currMinBodyAngle {
                   currMinBodyAngle = bodyAngle
               }
+              
+              /*
+              UIUtilities.addPieChart(to: poseOverlayView, startingAt: 0, endingAt: currMaxBodyAngle/3.60, radius: 100, fillColor: UIColor(red: 0.63, green: 0.48, blue: 0.63, alpha: 1), strokeColor: .purple, strokeSize: 2.0, rect: CGRect(x: 10.0, y: 10.0, width: 220.0, height: 220.0), bgColor: UIColor.white.withAlphaComponent(0.3))
+              if currMaxBodyAngle >= prevMaxBodyAngle{
+                  UIUtilities.addPieChart(to: poseOverlayView, startingAt: prevMaxBodyAngle/3.60, endingAt: currMaxBodyAngle/3.60, radius: 100, fillColor: .purple, strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 10.0, y: 10.0, width: 220.0, height: 220.0), bgColor: .clear)
+              }
+              if prevMaxBodyAngle > currMaxBodyAngle{
+                  UIUtilities.addPieChart(to: poseOverlayView, startingAt: currMaxBodyAngle/3.60, endingAt: prevMaxBodyAngle/3.60, radius: 100, fillColor: .gray, strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 10.0, y: 10.0, width: 220.0, height: 220.0), bgColor: .clear)
+              }
+              UIUtilities.addPieChart(to: poseOverlayView, startingAt: 0, endingAt: currMaxBodyAngle/3.60, radius: 30, fillColor: .clear, strokeColor: .black.withAlphaComponent(0.5), strokeSize: 1.0, rect: CGRect(x: 10.0, y: 10.0, width: 220.0, height: 220.0), bgColor: .clear)
+              
+               */
+              var mirror = false
+              if pose.landmark(ofType: PoseLandmarkType.rightHip).position.y > pose.landmark(ofType: PoseLandmarkType.rightAnkle).position.y {
+                  mirror = true
+              }
+              
+              UIUtilities.addPieChart(to: poseOverlayView, startingAt: 0, endingAt: currMaxBodyAngle/3.60, radius: 100, fillColor: UIColor(red: 0.63, green: 0.87, blue: 0.85, alpha: 1), strokeColor: UIColor(red: 0.0, green: 0.66, blue: 0.62, alpha: 1), strokeSize: 2.0, rect: CGRect(x: 30.0, y: 10.0, width: 220.0, height: 220.0), center: CGPoint(x: 110, y:160), bgColor: UIColor.white.withAlphaComponent(0.8), mirror: mirror)
+               if currMaxBodyAngle >= prevMaxBodyAngle{
+                   UIUtilities.addPieChart(to: poseOverlayView, startingAt: prevMaxBodyAngle/3.60, endingAt: currMaxBodyAngle/3.60, radius: 100, fillColor: UIColor(red: 0.0, green: 0.66, blue: 0.62, alpha: 1), strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 30.0, y: 10.0, width: 220.0, height: 220.0), center: CGPoint(x: 110, y:160), bgColor: .clear, mirror: mirror)
+               }
+               if prevMaxBodyAngle > currMaxBodyAngle{
+                   UIUtilities.addPieChart(to: poseOverlayView, startingAt: currMaxBodyAngle/3.60, endingAt: prevMaxBodyAngle/3.60, radius: 100, fillColor: .gray, strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 30.0, y: 10.0, width: 220.0, height: 220.0), center: CGPoint(x: 110, y:160), bgColor: .clear, mirror: mirror)
+               }
+               UIUtilities.addPieChart(to: poseOverlayView, startingAt: 0, endingAt: currMaxBodyAngle/3.60, radius: 30, fillColor: .clear, strokeColor: .black.withAlphaComponent(0.5), strokeSize: 1.0, rect: CGRect(x: 30.0, y: 10.0, width: 220.0, height: 220.0), center: CGPoint(x: 110, y:160), bgColor: .clear, mirror: mirror)
+               
+              
+              UIUtilities.addLabel(atPoint: CGPoint(x: 140.0, y: 50.0), to: poseOverlayView, color: .black, text: "Max body angle:", width: 220, bgColor: .clear)
+              UIUtilities.addLabel(atPoint: CGPoint(x: 140.0, y: 185.0), to: poseOverlayView, color: .black, text: Int(currMaxBodyAngle).description + "°", width: 50, bgColor: .clear)
+              
               
               
             if (legsAngle > 160 && bodyAngle > 90 && bodyAngle < 150) {
@@ -458,6 +639,7 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                     
                     
                     currMinBodyAngle = 370.0
+                    prevMaxBodyAngle = currMaxBodyAngle
                     currMaxBodyAngle = 0.0
                     
             
