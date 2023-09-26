@@ -57,6 +57,27 @@ public class UIUtilities {
     lineView.layer.addSublayer(lineLayer)
     inView.addSubview(lineView)
   }
+    
+    public static func addLineSegment2(
+      fromPoint: CGPoint, toPoint: CGPoint, inView: UIView, color: UIColor, width: CGFloat
+    ) {
+      let path = UIBezierPath()
+      path.move(to: fromPoint)
+      path.addLine(to: toPoint)
+      let lineLayer = CAShapeLayer()
+      lineLayer.path = path.cgPath
+      lineLayer.strokeColor = color.cgColor
+      lineLayer.opacity = 1.0
+      lineLayer.lineWidth = width
+      lineLayer.lineCap = .round
+      let lineView = UIView()
+      lineView.layer.addSublayer(lineLayer)
+      UIView.animate(withDuration: 2.0, animations: {
+          lineView.alpha = 0.0
+      })
+        
+      inView.addSubview(lineView)
+    }
 
   public static func addRectangle(_ rectangle: CGRect, to view: UIView, color: UIColor) {
     guard rectangle.isValid() else { return }
@@ -91,6 +112,34 @@ public class UIUtilities {
     view.addSubview(shapeView)
   }
     
+    public static func addPipeline(withPoints points: [NSValue]?, to view: UIView, color: UIColor) {
+      guard let points = points else { return }
+      let path = UIBezierPath()
+      for (index, value) in points.enumerated() {
+        let point = value.cgPointValue
+        if index == 0 {
+          path.move(to: point)
+        } else {
+          path.addLine(to: point)
+        }
+        if index == points.count - 1 {
+          path.close()
+        }
+      }
+      let shapeLayer = CAShapeLayer()
+      shapeLayer.path = path.cgPath
+        shapeLayer.fillColor = UIColor.white.withAlphaComponent(0.8).cgColor
+        
+      shapeLayer.strokeColor = UIColor.white.cgColor
+        shapeLayer.lineWidth = 1.0
+      let rect = CGRect(x: 0, y: 0, width: view.frame.size.width, height: view.frame.size.height)
+      let shapeView = UIView(frame: rect)
+      //shapeView.alpha = Constants.shapeViewAlpha
+      shapeView.layer.addSublayer(shapeLayer)
+      view.addSubview(shapeView)
+    }
+      
+    
   public static func addLabel(
     atPoint point: CGPoint,
     to view: UIView,
@@ -105,6 +154,7 @@ public class UIUtilities {
     label.text = text
     label.textColor = color
     label.backgroundColor = bgColor
+    label.font = UIFont(name: "Avenir", size: 18)
     if (UIDevice.current.orientation == .portraitUpsideDown) {
         label.transform = CGAffineTransform(rotationAngle: CGFloat.pi)
     }
@@ -184,18 +234,68 @@ public class UIUtilities {
         if mirror {
             shapeView.transform = CGAffineTransform(scaleX: -1, y: 1)
         }
+        shapeView.layer.cornerRadius = 8.0
+        shapeView.clipsToBounds = true
+        shapeView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMinXMinYCorner]
         
         view.addSubview(shapeView)
     }
     
-    public static func addArc(
+    public static func addWedge(
       to view: UIView,
-      center: CGPoint,
-      startingAt startPercent: CGFloat,
-      endingAt endPercent: CGFloat,
-      fillColor: UIColor,
-      strokeColor: UIColor
+      fixedHip: CGPoint,
+      hip: CGPoint,
+      shoulder: CGPoint,
+      fixedShoulder: CGPoint,
+    //startingAt startPercent: CGFloat,
+      //endingAt endPercent: CGFloat,
+      fillColor: UIColor
+      //strokeColor: UIColor
     ) {
+        //let center = CGPoint(x: hip.x + (fixedHip.x - hip.x)/2, y: hip.y + (fixedHip.y - hip.y)/2)
+        let path = UIBezierPath()
+        path.move(to: fixedHip)
+        path.addLine(to: hip)
+        path.addLine(to: shoulder)
+        path.addLine(to: fixedShoulder)
+        path.close()
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.path = path.cgPath
+        shapeLayer.fillColor = fillColor.cgColor
+        let rect = CGRect(x: 0, y: 0, width: view.frame.size.width, height: view.frame.size.height)
+        let shapeView = UIView(frame: rect)
+        shapeView.alpha = Constants.shapeViewAlpha
+        shapeView.layer.addSublayer(shapeLayer)
+        view.addSubview(shapeView)
+      }
+    public static func addArrow(to view: UIView, start: CGPoint, end: CGPoint, pointerLineLength: CGFloat, arrowAngle: CGFloat, fillColor: UIColor) {
+        let path = UIBezierPath()
+            path.move(to: start)
+            path.addLine(to: end)
+
+            let startEndAngle = atan((end.y - start.y) / (end.x - start.x)) + ((end.x - start.x) < 0 ? CGFloat(Double.pi) : 0)
+            let arrowLine1 = CGPoint(x: end.x + pointerLineLength * cos(CGFloat(Double.pi) - startEndAngle + arrowAngle), y: end.y - pointerLineLength * sin(CGFloat(Double.pi) - startEndAngle + arrowAngle))
+            let arrowLine2 = CGPoint(x: end.x + pointerLineLength * cos(CGFloat(Double.pi) - startEndAngle - arrowAngle), y: end.y - pointerLineLength * sin(CGFloat(Double.pi) - startEndAngle - arrowAngle))
+
+            path.addLine(to: arrowLine1)
+            path.move(to: end)
+            path.addLine(to: arrowLine2)
+            
+            let arrowLayer = CAShapeLayer()
+            arrowLayer.strokeColor = UIColor.black.cgColor
+            arrowLayer.lineWidth = 3
+            arrowLayer.path = path.cgPath
+            arrowLayer.fillColor = UIColor.clear.cgColor
+            arrowLayer.lineJoin = CAShapeLayerLineJoin.round
+            arrowLayer.lineCap = CAShapeLayerLineCap.round
+        
+            let rect = CGRect(x: 0, y: 0, width: view.frame.size.width, height: view.frame.size.height)
+            let shapeView = UIView(frame: rect)
+            shapeView.layer.addSublayer(arrowLayer)
+            view.addSubview(shapeView)
+        }
+        
+        /*
         let center = CGPoint(x: center.x - 10, y: center.y - 10)
         let rect = CGRect(x: 10.0, y: 10.0, width: 220.0, height: 220.0)
         let radius = min(rect.width-20, rect.height-20) / 4
@@ -218,7 +318,9 @@ public class UIUtilities {
         shapeView.layer.addSublayer(shapeLayer)
 
         view.addSubview(shapeView)
-    }
+         }
+         */
+    
 
   public static func imageOrientation(
     fromDevicePosition devicePosition: AVCaptureDevice.Position = .back
@@ -445,10 +547,14 @@ public class UIUtilities {
     let nearZExtent: CGFloat = -lowerBodyHeight * adjustmentRatio
     let farZExtent: CGFloat = lowerBodyHeight * adjustmentRatio
     let zColorRange: CGFloat = farZExtent - nearZExtent
-    let nearZColor = UIColor.red
-    let farZColor = UIColor.blue
+    let nearZColor = UIColor(red: 128.0/255.0, green: 43.0/255.0, blue: 226.0/255.0, alpha: 1.0)
+    let farZColor = UIColor(red: 8.0/255.0, green: 172.0/255.0, blue: 156.0/255.0, alpha: 1.0)
+      
+      
+      if pose.landmark(ofType: PoseLandmarkType.rightHip).position.y > pose.landmark(ofType: PoseLandmarkType.rightAnkle).position.y {
+         
 
-    for (startLandmarkType, endLandmarkTypesArray) in UIUtilities.poseConnections() {
+    for (startLandmarkType, endLandmarkTypesArray) in UIUtilities.poseConnectionsRight() {
       let startLandmark = pose.landmark(ofType: startLandmarkType)
       for endLandmarkType in endLandmarkTypesArray {
         let endLandmark = pose.landmark(ofType: endLandmarkType)
@@ -473,14 +579,100 @@ public class UIUtilities {
     }
       
     for landmark in pose.landmarks {
+        if ![PoseLandmarkType.rightEar,
+             PoseLandmarkType.leftEar,
+            PoseLandmarkType.leftEyeOuter,
+            PoseLandmarkType.leftEye,
+            PoseLandmarkType.leftEyeInner,
+            PoseLandmarkType.nose,
+            PoseLandmarkType.rightEyeInner,
+            PoseLandmarkType.rightEye,
+            PoseLandmarkType.rightEyeOuter,
+             PoseLandmarkType.mouthLeft,
+             PoseLandmarkType.mouthRight,
+             PoseLandmarkType.leftElbow,
+            PoseLandmarkType.leftWrist,
+            PoseLandmarkType.leftKnee,
+            PoseLandmarkType.leftAnkle,
+            PoseLandmarkType.leftIndexFinger,
+            PoseLandmarkType.leftPinkyFinger,
+            PoseLandmarkType.leftToe,
+            PoseLandmarkType.leftHeel,
+            PoseLandmarkType.leftThumb,
+             PoseLandmarkType.leftShoulder,
+             PoseLandmarkType.leftHip
+        ].contains(landmark.type){
       let landmarkPoint = positionTransformationClosure(landmark.position)
       UIUtilities.addCircle(
         atPoint: landmarkPoint,
         to: overlayView,
-        color: UIColor.blue,
+        color: UIColor(red: 8.0/255.0, green: 172.0/255.0, blue: 156.0/255.0, alpha: 1.0),
         radius: dotRadius
       )
+        }
     }
+      }
+      
+      else{
+          
+          for (startLandmarkType, endLandmarkTypesArray) in UIUtilities.poseConnectionsLeft() {
+            let startLandmark = pose.landmark(ofType: startLandmarkType)
+            for endLandmarkType in endLandmarkTypesArray {
+              let endLandmark = pose.landmark(ofType: endLandmarkType)
+              let startLandmarkPoint = positionTransformationClosure(startLandmark.position)
+              let endLandmarkPoint = positionTransformationClosure(endLandmark.position)
+
+              let landmarkZRatio = (startLandmark.position.z - nearZExtent) / zColorRange
+              let connectedLandmarkZRatio = (endLandmark.position.z - nearZExtent) / zColorRange
+
+              let startColor = UIUtilities.interpolatedColor(
+                fromColor: nearZColor, toColor: farZColor, ratio: landmarkZRatio)
+              let endColor = UIUtilities.interpolatedColor(
+                fromColor: nearZColor, toColor: farZColor, ratio: connectedLandmarkZRatio)
+
+              UIUtilities.addLineSegment(
+                fromPoint: startLandmarkPoint,
+                toPoint: endLandmarkPoint,
+                inView: overlayView,
+                colors: [startColor, endColor],
+                width: lineWidth)
+            }
+          }
+          
+          for landmark in pose.landmarks {
+              if ![PoseLandmarkType.rightEar,
+                   PoseLandmarkType.leftEar,
+                  PoseLandmarkType.leftEyeOuter,
+                  PoseLandmarkType.leftEye,
+                  PoseLandmarkType.leftEyeInner,
+                  PoseLandmarkType.nose,
+                  PoseLandmarkType.rightEyeInner,
+                  PoseLandmarkType.rightEye,
+                  PoseLandmarkType.rightEyeOuter,
+                   PoseLandmarkType.mouthLeft,
+                   PoseLandmarkType.mouthRight,
+                   PoseLandmarkType.rightElbow,
+                  PoseLandmarkType.rightWrist,
+                  PoseLandmarkType.rightKnee,
+                  PoseLandmarkType.rightAnkle,
+                  PoseLandmarkType.rightIndexFinger,
+                  PoseLandmarkType.rightPinkyFinger,
+                  PoseLandmarkType.rightToe,
+                  PoseLandmarkType.rightHeel,
+                  PoseLandmarkType.rightThumb,
+                   PoseLandmarkType.rightShoulder,
+                   PoseLandmarkType.rightHip
+              ].contains(landmark.type){
+            let landmarkPoint = positionTransformationClosure(landmark.position)
+            UIUtilities.addCircle(
+              atPoint: landmarkPoint,
+              to: overlayView,
+              color: UIColor.blue,
+              radius: dotRadius
+            )
+              }
+          }
+      }
       
     return overlayView
   }
@@ -505,8 +697,8 @@ public class UIUtilities {
       let nearZExtent: CGFloat = -lowerBodyHeight * adjustmentRatio
       let farZExtent: CGFloat = lowerBodyHeight * adjustmentRatio
       let zColorRange: CGFloat = farZExtent - nearZExtent
-      let nearZColor = UIColor.red
-      let farZColor = UIColor.blue
+      let nearZColor = UIColor(red: 128.0/255.0, green: 43.0/255.0, blue: 226.0/255.0, alpha: 1.0)
+      let farZColor = UIColor(red: 8.0/255.0, green: 172.0/255.0, blue: 156.0/255.0, alpha: 1.0)
 
       for (startLandmarkType, endLandmarkTypesArray) in UIUtilities.poseConnections() {
         let startLandmark = pose.landmark(ofType: startLandmarkType)
@@ -537,7 +729,7 @@ public class UIUtilities {
         UIUtilities.addCircle(
           atPoint: landmarkPoint,
           to: overlayView,
-          color: UIColor.blue,
+          color: UIColor(red: 8.0/255.0, green: 172.0/255.0, blue: 156.0/255.0, alpha: 1.0),
           radius: dotRadius
         )
       }
@@ -545,7 +737,7 @@ public class UIUtilities {
     
     public static func createPoseOverlayViewOnBody(
       forPose pose: Pose, inViewWithBounds bounds: CGRect, lineWidth: CGFloat, dotRadius: CGFloat,
-      positionTransformationClosure: (VisionPoint) -> CGPoint, rightAnkle: Vision3DPoint
+      positionTransformationClosure: (VisionPoint) -> CGPoint, ankleDifference: CGPoint
     ) -> UIView {
       let overlayView = UIView(frame: bounds)
 
@@ -568,7 +760,6 @@ public class UIUtilities {
       let nearZColor = UIColor.green
       let farZColor = UIColor.yellow
         
-      let ankleDifference = minus(lhs: positionTransformationClosure(pose.landmark(ofType: PoseLandmarkType.rightAnkle).position),  rhs: positionTransformationClosure(rightAnkle))
 
       for (startLandmarkType, endLandmarkTypesArray) in UIUtilities.poseConnections() {
         let startLandmark = pose.landmark(ofType: startLandmarkType)
@@ -609,11 +800,11 @@ public class UIUtilities {
       return overlayView
     }
     
-    private static func minus(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
+   static func minus(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
         return CGPoint(x: lhs.x - rhs.x, y: lhs.y - rhs.y)
     }
     
-    private static func plus(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
+    static func plus(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
         return CGPoint(x: lhs.x + rhs.x, y: lhs.y + rhs.y)
     }
 
@@ -625,7 +816,7 @@ public class UIUtilities {
   ///   - inView: The view to which the line should be added as a subview.
   ///   - colors: The colors that the gradient should traverse over. Must be non-empty.
   ///   - width: The width of the line segment.
-  private static func addLineSegment(
+  public static func addLineSegment(
     fromPoint: CGPoint, toPoint: CGPoint, inView: UIView, colors: [UIColor], width: CGFloat
   ) {
     let viewWidth = inView.bounds.width
@@ -723,6 +914,7 @@ public class UIUtilities {
   private static func poseConnections() -> [PoseLandmarkType: [PoseLandmarkType]] {
     struct PoseConnectionsHolder {
       static var connections: [PoseLandmarkType: [PoseLandmarkType]] = [
+        /*
         PoseLandmarkType.leftEar: [PoseLandmarkType.leftEyeOuter],
         PoseLandmarkType.leftEyeOuter: [PoseLandmarkType.leftEye],
         PoseLandmarkType.leftEye: [PoseLandmarkType.leftEyeInner],
@@ -732,6 +924,7 @@ public class UIUtilities {
         PoseLandmarkType.rightEye: [PoseLandmarkType.rightEyeOuter],
         PoseLandmarkType.rightEyeOuter: [PoseLandmarkType.rightEar],
         PoseLandmarkType.mouthLeft: [PoseLandmarkType.mouthRight],
+         */
         PoseLandmarkType.leftShoulder: [
           PoseLandmarkType.rightShoulder,
           PoseLandmarkType.leftHip,
@@ -766,6 +959,63 @@ public class UIUtilities {
     }
     return PoseConnectionsHolder.connections
   }
+    
+    /// Returns the minimum subset of all connected pose landmarks. Each key represents a start
+    /// landmark, and each value in the key's value array represents an end landmark which is
+    /// connected to the start landmark. These connections may be used for visualizing the landmark
+    /// positions on a pose object.
+    private static func poseConnectionsLeft() -> [PoseLandmarkType: [PoseLandmarkType]] {
+      struct PoseConnectionsHolder {
+        static var connections: [PoseLandmarkType: [PoseLandmarkType]] = [
+          PoseLandmarkType.leftShoulder: [
+            PoseLandmarkType.leftHip,
+            PoseLandmarkType.leftElbow
+          ],
+          PoseLandmarkType.leftWrist: [
+            PoseLandmarkType.leftElbow,
+            PoseLandmarkType.leftThumb,
+            PoseLandmarkType.leftIndexFinger,
+            PoseLandmarkType.leftPinkyFinger,
+          ],
+          PoseLandmarkType.leftHip: [PoseLandmarkType.leftKnee],
+          PoseLandmarkType.leftKnee: [PoseLandmarkType.leftAnkle],
+          PoseLandmarkType.leftAnkle: [PoseLandmarkType.leftHeel, PoseLandmarkType.leftToe],
+          PoseLandmarkType.leftHeel: [PoseLandmarkType.leftToe],
+          PoseLandmarkType.leftIndexFinger: [PoseLandmarkType.leftPinkyFinger],
+        ]
+      }
+      return PoseConnectionsHolder.connections
+    }
+
+
+    
+    /// Returns the minimum subset of all connected pose landmarks. Each key represents a start
+    /// landmark, and each value in the key's value array represents an end landmark which is
+    /// connected to the start landmark. These connections may be used for visualizing the landmark
+    /// positions on a pose object.
+    private static func poseConnectionsRight() -> [PoseLandmarkType: [PoseLandmarkType]] {
+      struct PoseConnectionsHolder {
+        static var connections: [PoseLandmarkType: [PoseLandmarkType]] = [
+          PoseLandmarkType.rightShoulder: [
+            PoseLandmarkType.rightHip,
+            PoseLandmarkType.rightElbow,
+          ],
+          PoseLandmarkType.rightWrist: [
+            PoseLandmarkType.rightElbow,
+            PoseLandmarkType.rightThumb,
+            PoseLandmarkType.rightIndexFinger,
+            PoseLandmarkType.rightPinkyFinger,
+          ],
+          PoseLandmarkType.rightHip: [PoseLandmarkType.rightKnee],
+          PoseLandmarkType.rightKnee: [PoseLandmarkType.rightAnkle],
+          PoseLandmarkType.rightAnkle: [PoseLandmarkType.rightHeel, PoseLandmarkType.rightToe],
+          PoseLandmarkType.rightHeel: [PoseLandmarkType.rightToe],
+          PoseLandmarkType.rightIndexFinger: [PoseLandmarkType.rightPinkyFinger],
+        ]
+      }
+      return PoseConnectionsHolder.connections
+    }
+
 
   private static func currentUIOrientation() -> UIDeviceOrientation {
     let deviceOrientation = { () -> UIDeviceOrientation in
