@@ -30,8 +30,8 @@ class CameraViewController: UIViewController, ChartViewDelegate{
     private var e1 : CGFloat = 13.0
     private var e2 : CGFloat = 0.0
     private var e3 : CGFloat = 818.0
-    private var redArmInterval : CGFloat = 0.0
-    private var redBodyInterval : CGFloat = 0.0
+    public var redArmInterval : CGFloat = 0.0
+    public var redBodyInterval : CGFloat = 0.0
     
     // ellipse
     private var ellipseOverlayView : UIView!
@@ -843,8 +843,7 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                 return
             }
             weak var weakSelf = self
-            let mainQueue = DispatchQueue.main
-            mainQueue.sync {
+            DispatchQueue.main.sync {
                 guard let strongSelf = weakSelf else {
                     print("Self is nil!")
                     return
@@ -867,105 +866,23 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             stopBlinking = false
                             view.layer.removeAllAnimations()
                             recButton.tintColor = recButton.tintColor?.withAlphaComponent(1)
-                            //self.isRecordingLabel.text = "Stopped recording"
-                            //self.recordButton.setTitle("Record", for: .normal)
                         }
                     }
                 }
                 
                 // Pose detected. Currently, only single person detection is supported.
                 poses.forEach { pose in
-                    
-                    
-                    
-                    // show overlay skeleton with its speed
-                    if(showVideo && movement.count > 0){
-                        if(index >= movement.count) {index = 0}
-                        let ankleAthlete = movement[index].landmark(ofType: PoseLandmarkType.rightAnkle).position
-                        let ankleSkeleton = pose.landmark(ofType: PoseLandmarkType.rightAnkle).position
-                        let ankleDifference = UIUtilities.minus(lhs: strongSelf.normalizedPoint(
-                            fromVisionPoint: ankleAthlete, width: width, height: height),
-                                                                rhs: strongSelf.normalizedPoint(fromVisionPoint: ankleSkeleton, width: width, height: height))
-                        let poseOverlayView2 = UIUtilities.createPoseOverlayViewOnBody(
-                            forPose: movement[index],
-                            inViewWithBounds: strongSelf.annotationOverlayView.bounds,
-                            lineWidth: Constant.bigLineWidth,
-                            dotRadius: Constant.bigDotRadius,
-                            positionTransformationClosure: { (position) -> CGPoint in
-                                return strongSelf.normalizedPoint(
-                                    fromVisionPoint: position, width: width, height: height)
-                            },
-                            ankleDifference: ankleDifference
-                        )
-                        index += 1
-                        strongSelf.removeDetectionAnnotations()
-                        strongSelf.annotationOverlayView.addSubview(poseOverlayView2)
-                    }
-                    
-                    // show overlay skeleton with same speed
-                    /*
-                     if(showVideo && movement.count > 0){
-                     var currmin = 1000000.0
-                     var bestindex = 0
-                     var i = 0
-                     var j = 0
-                     let ankleAthlete = pose.landmark(ofType: PoseLandmarkType.rightAnkle).position
-                     let shoulderAthlete = pose.landmark(ofType: PoseLandmarkType.rightShoulder).position
-                     var ankleDifference = CGPoint(x: 0.0, y: 0.0)
-                     
-                     while(j < 50) {
-                     if(index + i >= movement.count) {
-                     index = 0
-                     i = 0
-                     }
-                     print(index + i)
-                     let ankleSkeleton = movement[index + i].landmark(ofType: PoseLandmarkType.rightAnkle).position
-                     let tempAnkleDifference = UIUtilities.minus(lhs: strongSelf.normalizedPoint(
-                     fromVisionPoint: ankleSkeleton, width: width, height: height),
-                     rhs: strongSelf.normalizedPoint(fromVisionPoint: ankleAthlete, width: width, height: height))
-                     
-                     let shoulderSkeleton = UIUtilities.minus(lhs: strongSelf.normalizedPoint( fromVisionPoint: movement[index + i].landmark(ofType: PoseLandmarkType.rightShoulder).position, width: width, height: height), rhs: tempAnkleDifference)
-                     let shoulderDistancex = abs(shoulderAthlete.x - shoulderSkeleton.x)
-                     let shoulderDistancey = abs(shoulderAthlete.y - shoulderSkeleton.y)
-                     let shoulderDistance = shoulderDistancex + shoulderDistancey
-                     print(shoulderDistance)
-                     if shoulderDistance < currmin {
-                     bestindex = index + i
-                     currmin = shoulderDistance
-                     ankleDifference = tempAnkleDifference
-                     }
-                     i = i + 1
-                     j = j + 1
-                     }
-                     index = bestindex
-                     print(bestindex)
-                     
-                     let poseOverlayView2 = UIUtilities.createPoseOverlayViewOnBody(
-                     forPose: movement[index],
-                     inViewWithBounds: strongSelf.annotationOverlayView.bounds,
-                     lineWidth: Constant.bigLineWidth,
-                     dotRadius: Constant.bigDotRadius,
-                     positionTransformationClosure: { (position) -> CGPoint in
-                     return strongSelf.normalizedPoint(
-                     fromVisionPoint: position, width: width, height: height)
-                     },
-                     ankleDifference: ankleDifference
-                     )
-                     //index += 1
-                     strongSelf.removeDetectionAnnotations()
-                     strongSelf.annotationOverlayView.addSubview(poseOverlayView2)
-                     }
-                     */
+                    self.showOverlayOriginalSpeed(strongSelf: strongSelf, showVideo: showVideo, movement: movement, pose: pose, width: width, height: height)
+                    // self.showOverlaySameSpeed(showVideo, movement, index, pose, width, height)
                     
                     if(!showVideo){
-                        
                         // Checking orientation
                         var mirror = false
                         if pose.landmark(ofType: PoseLandmarkType.rightHip).position.y > pose.landmark(ofType: PoseLandmarkType.rightAnkle).position.y {
                             mirror = true
                         }
                         
-                        
+                        // Creating pose overlay view
                         let poseOverlayView = UIUtilities.createPoseOverlayView(
                             forPose: pose,
                             inViewWithBounds: strongSelf.annotationOverlayView.bounds,
@@ -977,7 +894,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             }
                         )
                         
-                        
                         // Computing useful points
                         let rightKnee = pose.landmark(ofType: PoseLandmarkType.rightKnee)
                         let rightHip = pose.landmark(ofType: PoseLandmarkType.rightHip)
@@ -985,140 +901,19 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                         let rightElbow = pose.landmark(ofType: PoseLandmarkType.rightElbow)
                         let rightWrist = pose.landmark(ofType: PoseLandmarkType.rightWrist)
                         
-                        
-                        
                         // Computing legs, body and elbow angle
                         legsAngle = self.angle(firstLandmark: rightHip, midLandmark: rightKnee, lastLandmark: pose.landmark(ofType: PoseLandmarkType.rightAnkle))
                         bodyAngle = self.angle(firstLandmark: pose.landmark(ofType: PoseLandmarkType.rightShoulder), midLandmark: rightHip, lastLandmark: rightKnee)
                         elbowAngle = self.angle(firstLandmark: rightWrist, midLandmark: rightElbow, lastLandmark: rightShoulder)
                         
                         if showPipeline {
-                            
-                            //pipeline graph
-                            let legsPPPoints = [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
-                                                NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
-                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                NSValue(cgPoint: CGPoint(x: 190 + e2, y: 150 + e3)),
-                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 200 + e3 + e1))]
-                            let bodyPPPoints = [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 200 + e3 + e1)),
-                                                NSValue(cgPoint: CGPoint(x: 190 + e2, y: 150 + e3)),
-                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                NSValue(cgPoint: CGPoint(x: 298 + e2, y: 150 + e3)),
-                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 200 + e3 + e1))]
-                            let armsPPPoints = [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 200 + e3 + e1)),
-                                                NSValue(cgPoint: CGPoint(x: 298 + e2, y: 150 + e3)),
-                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                NSValue(cgPoint: CGPoint(x: 398 + e2, y: 100 + e3 - e1)),
-                                                NSValue(cgPoint: CGPoint(x: 398 + e2, y: 200 + e3 + e1))]
-                            
-                            UIUtilities.addPipeline(withPoints: legsPPPoints, to: poseOverlayView, color: UIColor.black)
-                            UIUtilities.addPipeline(withPoints: bodyPPPoints, to: poseOverlayView, color: UIColor.black)
-                            UIUtilities.addPipeline(withPoints: armsPPPoints, to: poseOverlayView, color: UIColor.black)
-                            UIUtilities.addLabel(atPoint: CGPoint(x:111+e2, y:150 + e3), to: poseOverlayView, color: UIColor.black, text: "Legs", width: 50, bgColor: .clear)
-                            UIUtilities.addLabel(atPoint: CGPoint(x:234+e2, y:150 + e3), to: poseOverlayView, color: UIColor.black, text: "Body", width: 50, bgColor: .clear)
-                            UIUtilities.addLabel(atPoint: CGPoint(x:340+e2, y:150 + e3), to: poseOverlayView, color: UIColor.black, text: "Arms", width: 50, bgColor: .clear)
-                            
-                            
-                            if(!isGrowing){
-                                //print(legsAngle)
-                                if legsAngle <= 90 {
-                                    let firstleginterval = ((legsAngle - currMinLegsAngle) / (90 - currMinLegsAngle)) * (108 - 0.8*e1)
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 42 + e2 + firstleginterval, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 42 + e2 + firstleginterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
-                                }
-                                else{
-                                    let leginterval = ((legsAngle - 90) / (180 - 90)) * (40 + 0.8*e1)
-                                    
-                                    var bodyinterval = ((bodyAngle - currMinBodyAngle) / (prevMaxBodyAngle - currMinBodyAngle)) * 148
-                                    if bodyinterval > 148 {
-                                        bodyinterval = 148
-                                    }
-                                    //oppure passi direttamente al body interval arrivato li?
-                                    if (bodyinterval > leginterval){
-                                        var arminterval = ((180 - elbowAngle) / (180 - currMinElbowAngle)) * (140 + 0.8*e1)
-                                        if arminterval > (140 + 0.8*e1) {
-                                            arminterval = (140 + 0.8*e1)
-                                        }
-                                        //anche qui
-                                        if (arminterval + 258 + e2 - 0.8*e1 > bodyinterval + 150 + e2 - 0.8*e1) && (bodyinterval + 150 + e2 - 0.8*e1 > 258 + e2 - 0.8*e1) {
-                                            UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
-                                                                              NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
-                                                                              NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + arminterval, y: 100 + e3-e1)),
-                                                                              NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + arminterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
-                                        }
-                                        else{
-                                            UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
-                                                                              NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
-                                                                              NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + bodyinterval, y: 100 + e3 - e1)),
-                                                                              NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + bodyinterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
-                                        }
-                                    }
-                                    else{
-                                        UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
-                                                                          NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
-                                                                          NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + leginterval, y: 100 + e3 - e1)),
-                                                                          NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + leginterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
-                                    }
-                                    
-                                    
-                                }
-                                
-                                
-                            }
-                            
-                            if redArmInterval > 0 {
-                                if redArmInterval > (140 + 0.8*e1) {
-                                    redArmInterval = 140 + 0.8*e1
-                                }
-                                if redArmInterval >= 40 + 0.8*e1 {
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 298 + e2, y: 150 + e3)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
-                                }
-                                else{
-                                    let yintersection = 1.25*redArmInterval
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 200 + e3 + e1 - yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 100 + e3 - e1 + yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
-                                }
-                            }
-                            
-                            if redBodyInterval > 0 {
-                                if redBodyInterval > 148 {
-                                    redBodyInterval = 148
-                                }
-                                if redBodyInterval >= 40 + 0.8*e1 {
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 190 + e2, y: 150 + e3)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
-                                }
-                                else{
-                                    let yintersection = 1.25*redBodyInterval
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 200 + e3 + e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 200 + e3 + e1 - yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
-                                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 100 + e3 - e1)),
-                                                                      NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 100 + e3 - e1 + yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
-                                }
-                            }
+                            showPipeline(poseOverlayView: poseOverlayView, e1: e1, e2: e2, e3: e3, legsAngle: legsAngle, bodyAngle: bodyAngle, currMinLegsAngle: currMinLegsAngle, currMinBodyAngle: currMinBodyAngle, prevMaxBodyAngle: prevMaxBodyAngle, elbowAngle: elbowAngle, isGrowing: isGrowing)
                         }
-                        
                         
                         if flagPoint3{
                             if ellipseDistances.count > 0 {
-                                let sumDistancesArray = ellipseDistances.reduce(0, +)
-                                let sumTimesArray = ellipseTimes.reduce(0, +)
+                                let sumDistancesArray = self.ellipseDistances.reduce(0, +)
+                                let sumTimesArray = self.ellipseTimes.reduce(0, +)
                                 
                                 let avgDistancesValue = CGFloat(sumDistancesArray)/CGFloat(ellipseDistances.count)
                                 let avgTimesValue = CGFloat(sumTimesArray)/CGFloat(ellipseTimes.count)
@@ -1132,7 +927,7 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                                 
                                 avgArrayValue = avgArrayValue/maxAverageValue * 10
                                 let lineColor = UIColor(red:255.0/255.0, green:(255.0-avgArrayValue*25.5)/255.0, blue:(178.0-avgArrayValue*14.0)/255.0, alpha:1)
-                               
+                                
                                 
                                 UIUtilities.addLineSegment2(fromPoint: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: rightWrist.position, width: width, height: height).x, y: strongSelf.normalizedPoint(fromVisionPoint: rightWrist.position, width: width, height: height).y), toPoint: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: previuosWrist.position, width: width, height: height).x, y: strongSelf.normalizedPoint(fromVisionPoint: previuosWrist.position, width: width, height: height).y), inView: ellipseOverlayView, color: lineColor, width: 10) }
                             
@@ -1151,10 +946,10 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                         // Displaying arc on elbow angle in red if wrong, green if right
                         let c1 = rightElbow.position.x - rightShoulder.position.x
                         let c2 = rightElbow.position.y - rightShoulder.position.y
-                        let arcAngle = 90 + (atan(c2/c1) * (180 / Double.pi))
+                        let arcAngle = 90 + (atan(Double(c2) / Double(c1)) * (180 / Double.pi))
                         let c3 = rightElbow.position.x - rightWrist.position.x
                         let c4 = rightElbow.position.y - rightWrist.position.y
-                        var arcAngle2 = 90 + (atan(c4/c3) * (180 / Double.pi))
+                        var arcAngle2 = 90 + (atan(Double(c4) / Double(c3)) * (180 / Double.pi))
                         if c3 < 0{
                             arcAngle2 = 180 + arcAngle2
                         }
@@ -1186,21 +981,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             UIUtilities.addPieChart(to: poseOverlayView, startingAt: arcAngle/3.60, endingAt: arcAngle2/3.60, radius: 50, fillColor: colorArc.withAlphaComponent(0.5), strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 0.0, y: 0.0, width: poseOverlayView.frame.size.width, height: poseOverlayView.frame.size.height), center: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: rightElbow.position, width: width, height: height).x, y: strongSelf.normalizedPoint(fromVisionPoint: rightElbow.position, width: width, height: height).y), bgColor: .clear, mirror: false)
                         }
                         
-                        /*
-                         
-                         if (legsAngle > 30 && legsAngle < 80) {
-                         fixedShoulderPoint = strongSelf.normalizedPoint(fromVisionPoint: pose.landmark(ofType: PoseLandmarkType.rightShoulder).position, width: width, height: height)
-                         fixedHipPoint = strongSelf.normalizedPoint(fromVisionPoint: pose.landmark(ofType: PoseLandmarkType.rightHip).position, width: width, height: height)
-                         fixedShoulderPointVis = pose.landmark(ofType: PoseLandmarkType.rightShoulder).position
-                         fixedHipPointVis = pose.landmark(ofType: PoseLandmarkType.rightHip).position
-                         flagPoint = true
-                         }
-                         */
-                        
-                        //UIUtilities.addCircle(atPoint: fixedHipPoint, to: poseOverlayView, color: UIColor.blue, radius: 5.0)
-                        //UIUtilities.addCircle(atPoint: fixedShoulderPoint, to: poseOverlayView, color: UIColor.blue, radius: 5.0)
-                        //let currShoulderPoint = strongSelf.normalizedPoint(fromVisionPoint: pose.landmark(ofType: PoseLandmarkType.rightShoulder).position, width: width, height: height)
-                        
                         if(flagPoint && legsAngle < 95 && !isGrowing)
                         { if(bodyAngle - currMinBodyAngle > 15) {
                             redBodyInterval = ((bodyAngle - currMinBodyAngle) / (prevMaxBodyAngle - currMinBodyAngle)) * 148
@@ -1211,44 +991,22 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             if showHipEM{
                                 hipEM.isHidden = false
                             }
-                            
-                            //let currHipPoint = strongSelf.normalizedPoint(fromVisionPoint: pose.landmark(ofType: PoseLandmarkType.rightHip).position, width: width, height: height)
-                            
-                            //let hipDifference = UIUtilities.minus(lhs: currHipPoint, rhs: fixedHipPoint)
-                            
-                            //let newShoulderPoint = UIUtilities.plus(lhs: fixedShoulderPoint, rhs: hipDifference)
-                            
                             newShoulderPointx = (fixedShoulderPointVis.x)/width
                             newShoulderPointy = (fixedShoulderPointVis.y + (rightHip.position.y - fixedHipPointVis.y))/height
-                            
-                            
-                            
-                            //print(fixedShoulderPoint.x)
-                            //print(fixedShoulderPointVis.y)
-                            
-                            
-                            //UIUtilities.addCircle(atPoint: CGPoint(x: previewLayer.layerPointConverted(fromCaptureDevicePoint: CGPoint(x: newShoulderPointx, y: newShoulderPointy)).x, y: previewLayer.layerPointConverted(fromCaptureDevicePoint: CGPoint(x: newShoulderPointx, y: newShoulderPointy)).y), to: poseOverlayView, color: UIColor.blue, radius: 50.0)
-                            
-                            
-                            //UIUtilities.addLineSegment(fromPoint: currHipPoint, toPoint: newShoulderPoint, inView: poseOverlayView, color: UIColor.blue, width: 7.0)
-                            
-                            
-                            
-                            
                             
                             //entrambe vanno al contrario
                             //questa sarebbe la y
                             let c9 = rightHip.position.x - rightShoulder.position.x
                             //questa sarebbe la x
                             let c10 = rightHip.position.y - rightShoulder.position.y
-                            arcAngle5 = 90 + (atan(c10/c9) * (180 / Double.pi))
+                            arcAngle5 = 90 + (atan(Double(c10) / Double(c9)) * (180 / Double.pi))
                             //new shoulder point x is actually x
                             let c11 = rightHip.position.x + newShoulderPointx
                             //new shoulder point y is actually y
                             let c12 = rightHip.position.y + newShoulderPointy
                             
                             
-                            arcAngle6 = 90 + (atan(c12/c11) * (180 / Double.pi))
+                            arcAngle6 = 90 + (atan(Double(c12) / Double(c11)) * (180 / Double.pi))
                             
                             if arcAngle6 < arcAngle5{
                                 arcAngle6 = arcAngle5
@@ -1278,11 +1036,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                                 NSValue(cgPoint: newFixedShoulder)
                             ]
                             
-                            /*UIUtilities.addPieChart(to: poseOverlayView, startingAt: arcAngle5/3.60, endingAt: arcAngle6/3.60, radius: 150, fillColor: UIColor.red.withAlphaComponent(0.5), strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 10.0, y: 10.0, width: 100.0, height: 100.0), center: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: fixedRightHipPosition, width: width, height: height).x - 10, y: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height).y - 10), bgColor: .clear, mirror: false)
-                             UIUtilities.addShape(withPoints: arrayPoints,
-                             to: poseOverlayView, color: UIColor.red) */
-                            
-                            
                             UIUtilities.addWedge(to: poseOverlayView, fixedHip: fixedHip, hip: hip, shoulder: newFixedShoulder, fixedShoulder: fixedShoulder, fillColor: UIColor.black)
                             UIUtilities.addShape(withPoints: arrayPoints, to: poseOverlayView, color: UIColor(red:216.0/255.0, green:27.0/255.0, blue:96.0/255.0, alpha:0.9))
                             UIUtilities.addArrow(to: poseOverlayView, start: shoulder, end: newFixedShoulder, pointerLineLength: 10, arrowAngle: CGFloat(Double.pi / 4), fillColor: UIColor.black)
@@ -1295,51 +1048,18 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             angleAt90 = bodyAngle
                         }
                         
-                        /*
-                         let c5 = rightShoulder.position.x - rightHip.position.x
-                         let c6 = rightShoulder.position.y - rightHip.position.y
-                         let arcAngle3 = 90 + (atan(c6/c5) * (180 / Double.pi))
-                         if angleAt90 > 40{
-                         colorArc2 = .red
-                         self.hipLabelLong.text = "Body opened too early"
-                         self.hipLabelLong.textColor = .red
-                         if showHipEM{
-                         hipEM.isHidden = false
-                         }
-                         }
-                         else{
-                         colorArc2 = .green
-                         self.hipLabelLong.text = "Body opened on time"
-                         self.hipLabelLong.textColor = UIColor(red: 0.10, green: 0.60, blue: 0.40, alpha: 1)
-                         hipEM.isHidden = true
-                         }
-                         
-                         if (!isGrowing && showHip){
-                         UIUtilities.addPieChart(to: poseOverlayView, startingAt: arcAngle3/3.60, endingAt: (arcAngle3 + bodyAngle)/3.60, radius: 50, fillColor: colorArc2.withAlphaComponent(0.5), strokeColor: .clear, strokeSize: 0.0, rect: CGRect(x: 10.0, y: 10.0, width: 100.0, height: 100.0), center: CGPoint(x: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height).x - 10, y: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height).y - 10), bgColor: .clear, mirror: false)
-                         }*/
-                        
                         // approximating legs and body angles
                         legsAngleApprox = (5 * CGFloat(Int(legsAngle/5)))
                         bodyAngleApprox = (5 * CGFloat(Int(bodyAngle/5)))
                         
-                        //UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightKnee.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(legsAngleApprox).description, width: 50)
-                        //UIUtilities.addLabel(atPoint: strongSelf.normalizedPoint(fromVisionPoint: rightHip.position, width: width, height: height), to: poseOverlayView, color: UIColor.blue, text: Int(bodyAngleApprox).description, width: 50)
-                        
-                        
-                        
                         if bodyAngle > currMaxBodyAngle {
                             currMaxBodyAngle = bodyAngle
                         }
-                        //print(currMaxBodyAngle)
                         if legsAngle > currMaxLegsAngle {
                             currMaxLegsAngle = legsAngle
                         }
                         if bodyAngle < currMinBodyAngle {
                             currMinBodyAngle = bodyAngle
-                            /*
-                             fixedShoulderPoint = strongSelf.normalizedPoint(fromVisionPoint: pose.landmark(ofType: PoseLandmarkType.rightShoulder).position, width: width, height: height)
-                             fixedHipPoint = strongSelf.normalizedPoint(fromVisionPoint: pose.landmark(ofType: PoseLandmarkType.rightHip).position, width: width, height: height)
-                             */
                         }
                         if legsAngle < currMinLegsAngle {
                             currMinLegsAngle = legsAngle
@@ -1382,17 +1102,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             isStart = false
                             if isStart && elapsedTime > 1 && elapsedTime < 5{
                                 isStart = false
-                                
-                                
-                                
-                                
-                                
-                                //self.anglesLabel.text = "Min Angle: " + String(Int(currMinBodyAngle)) + " Max Angle: " + String(Int(currMaxBodyAngle)) + " Angle at 90: " + String(Int(angleAt90))
-                                
-                                
-                                
-                                
-                                isStart = false
                                 if((endPos - startPos) > previousDriveLength){
                                     driveLengthText = "Drive Length incresead"
                                     driveLengthLabel.textColor = UIColor.green
@@ -1410,14 +1119,9 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             }
                         }
                         if (legsAngle < 80 && bodyAngle < 45) {
-                            //Start of stroke
                             isStart = true
-                            
                         }
                         
-                        
-                        //print(elbowAngle)
-                        //print(previousElbowAngle)
                         if(elbowAngle - 5 > previousElbowAngle && !isGrowing ){
                             print("start")
                             isGrowing = true
@@ -1458,7 +1162,7 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                                 redBodyInterval = 0.0
                             }
                         }
-    
+                        
                         if(legsAngle - 5 > previousLegsAngle && isGrowing && strongSelf.normalizedPoint(fromVisionPoint: rightWrist.position, width: width, height: height).x < previuosWrist2 && isStart){
                             print("end")
                             startDriveTime = CACurrentMediaTime()
@@ -1484,14 +1188,6 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                             previousElbowAngle = elbowAngle
                             previuosWrist2 = strongSelf.normalizedPoint(fromVisionPoint: rightWrist.position, width: width, height: height).x
                         }
-                        /*
-                         if(!isGrowing && legsAngle < previousLegsAngle){
-                         ellipseOverlayView = UIView(frame: strongSelf.annotationOverlayView.bounds)
-                         flagPoint3 = true
-                         print("INIOzio")
-                         }
-                         */
-                        
                         
                         strongSelf.removeDetectionAnnotations()
                         strongSelf.annotationOverlayView.addSubview(poseOverlayView)
@@ -1500,10 +1196,172 @@ class CameraViewController: UIViewController, ChartViewDelegate{
                     }
                 }
             }
+
+            
         }
     }
     
+    public func showOverlayOriginalSpeed(strongSelf: CameraViewController, showVideo: Bool, movement: [Pose], pose: Pose, width: CGFloat, height: CGFloat) {
+                // Check if you want to show the video and if there is movement data
+                if showVideo && movement.count > 0 {
+                // Check and reset the index if it's out of bounds
+                if index >= movement.count {
+                index = 0
+                }
+
+                // Get the ankle positions
+                let ankleAthlete = movement[index].landmark(ofType: PoseLandmarkType.rightAnkle).position
+                let ankleSkeleton = pose.landmark(ofType: PoseLandmarkType.rightAnkle).position
+
+                // Calculate the ankle difference
+                let ankleDifference = UIUtilities.minus(
+                lhs: strongSelf.normalizedPoint(fromVisionPoint: ankleAthlete, width: width, height: height),
+                rhs: strongSelf.normalizedPoint(fromVisionPoint: ankleSkeleton, width: width, height: height)
+                )
+
+                // Create the pose overlay view
+                let poseOverlayView2 = UIUtilities.createPoseOverlayViewOnBody(
+                forPose: movement[index],
+                inViewWithBounds: strongSelf.annotationOverlayView.bounds,
+                lineWidth: Constant.bigLineWidth,
+                dotRadius: Constant.bigDotRadius,
+                positionTransformationClosure: { (position) -> CGPoint in
+                    return strongSelf.normalizedPoint(fromVisionPoint: position, width: width, height: height)
+                },
+                ankleDifference: ankleDifference
+                )
+
+                // Increment the index
+                index += 1
+
+                // Remove previous detection annotations
+                strongSelf.removeDetectionAnnotations()
+
+                // Add the new pose overlay view
+                strongSelf.annotationOverlayView.addSubview(poseOverlayView2)
+                }
+            }
     
+    func showPipeline(poseOverlayView: UIView, e1: CGFloat, e2: CGFloat, e3: CGFloat, legsAngle: CGFloat, bodyAngle: CGFloat, currMinLegsAngle: CGFloat, currMinBodyAngle: CGFloat, prevMaxBodyAngle: CGFloat, elbowAngle: CGFloat, isGrowing: Bool) {
+        // Define pipeline points
+        let legsPPPoints = [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
+                    NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
+                    NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8 * e1, y: 100 + e3 - e1)),
+                    NSValue(cgPoint: CGPoint(x: 190 + e2, y: 150 + e3)),
+                    NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8 * e1, y: 200 + e3 + e1))]
+
+        let bodyPPPoints = [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8 * e1, y: 200 + e3 + e1)),
+                    NSValue(cgPoint: CGPoint(x: 190 + e2, y: 150 + e3)),
+                    NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8 * e1, y: 100 + e3 - e1)),
+                    NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8 * e1, y: 100 + e3 - e1)),
+                    NSValue(cgPoint: CGPoint(x: 298 + e2, y: 150 + e3)),
+                    NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8 * e1, y: 200 + e3 + e1))]
+
+        let armsPPPoints = [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8 * e1, y: 200 + e3 + e1)),
+                    NSValue(cgPoint: CGPoint(x: 298 + e2, y: 150 + e3)),
+                    NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8 * e1, y: 100 + e3 - e1)),
+                    NSValue(cgPoint: CGPoint(x: 398 + e2, y: 100 + e3 - e1)),
+                    NSValue(cgPoint: CGPoint(x: 398 + e2, y: 200 + e3 + e1))]
+
+        // Add pipelines and labels to the overlay
+        UIUtilities.addPipeline(withPoints: legsPPPoints, to: poseOverlayView, color: UIColor.black)
+        UIUtilities.addPipeline(withPoints: bodyPPPoints, to: poseOverlayView, color: UIColor.black)
+        UIUtilities.addPipeline(withPoints: armsPPPoints, to: poseOverlayView, color: UIColor.black)
+        UIUtilities.addLabel(atPoint: CGPoint(x: 111 + e2, y: 150 + e3), to: poseOverlayView, color: UIColor.black, text: "Legs", width: 50, bgColor: .clear)
+        UIUtilities.addLabel(atPoint: CGPoint(x: 234 + e2, y: 150 + e3), to: poseOverlayView, color: UIColor.black, text: "Body", width: 50, bgColor: .clear)
+        UIUtilities.addLabel(atPoint: CGPoint(x: 340 + e2, y: 150 + e3), to: poseOverlayView, color: UIColor.black, text: "Arms", width: 50, bgColor: .clear)
+        if(!isGrowing){
+            if legsAngle <= 90 {
+                let firstleginterval = ((legsAngle - currMinLegsAngle) / (90 - currMinLegsAngle)) * (108 - 0.8*e1)
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 42 + e2 + firstleginterval, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 42 + e2 + firstleginterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
+            }
+            else{
+                let leginterval = ((legsAngle - 90) / (180 - 90)) * (40 + 0.8*e1)
+                
+                var bodyinterval = ((bodyAngle - currMinBodyAngle) / (prevMaxBodyAngle - currMinBodyAngle)) * 148
+                if bodyinterval > 148 {
+                    bodyinterval = 148
+                }
+                //oppure passi direttamente al body interval arrivato li?
+                if (bodyinterval > leginterval){
+                    var arminterval = ((180 - elbowAngle) / (180 - currMinElbowAngle)) * (140 + 0.8*e1)
+                    if arminterval > (140 + 0.8*e1) {
+                        arminterval = (140 + 0.8*e1)
+                    }
+                    //anche qui
+                    if (arminterval + 258 + e2 - 0.8*e1 > bodyinterval + 150 + e2 - 0.8*e1) && (bodyinterval + 150 + e2 - 0.8*e1 > 258 + e2 - 0.8*e1) {
+                        UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
+                                                        NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
+                                                        NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + arminterval, y: 100 + e3-e1)),
+                                                        NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + arminterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
+                    }
+                    else{
+                        UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
+                                                        NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
+                                                        NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + bodyinterval, y: 100 + e3 - e1)),
+                                                        NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + bodyinterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
+                    }
+                }
+                else{
+                    UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 42 + e2, y: 200 + e3 + e1)),
+                                                    NSValue(cgPoint: CGPoint(x: 42 + e2, y: 100 + e3 - e1)),
+                                                    NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + leginterval, y: 100 + e3 - e1)),
+                                                    NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + leginterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:0.0/255.0, green:90.0/255.0, blue:181.0/255.0, alpha:1.0))
+                }
+                
+                
+            }
+            
+            
+        }
+        
+        if redArmInterval > 0 {
+            if redArmInterval > (140 + 0.8*e1) {
+                redArmInterval = 140 + 0.8*e1
+            }
+            if redArmInterval >= 40 + 0.8*e1 {
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 298 + e2, y: 150 + e3)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
+            }
+            else{
+                let yintersection = 1.25*redArmInterval
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 200 + e3 + e1 - yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 258 + e2 - 0.8*e1 + redArmInterval, y: 100 + e3 - e1 + yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
+            }
+        }
+        
+        if redBodyInterval > 0 {
+            if redBodyInterval > 148 {
+                redBodyInterval = 148
+            }
+            if redBodyInterval >= 40 + 0.8*e1 {
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 190 + e2, y: 150 + e3)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 200 + e3 + e1))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
+            }
+            else{
+                let yintersection = 1.25*redBodyInterval
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 200 + e3 + e1)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 200 + e3 + e1 - yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
+                UIUtilities.addShape(withPoints: [NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 100 + e3 - e1)),
+                                                NSValue(cgPoint: CGPoint(x: 150 + e2 - 0.8*e1 + redBodyInterval, y: 100 + e3 - e1 + yintersection))], to: poseOverlayView, color: UIColor(red:220.0/255.0, green:50.0/255.0, blue:32.0/255.0, alpha:1.0))
+            }
+        }
+    }
     
     public func angle(
         firstLandmark: PoseLandmark,
@@ -2022,4 +1880,3 @@ private enum Constant {
     static let imageLabelResultFrameWidth = 0.5
     static let imageLabelResultFrameHeight = 0.8
     static let segmentationMaskAlpha: CGFloat = 0.5
-}

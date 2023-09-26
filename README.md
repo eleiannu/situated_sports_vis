@@ -26,4 +26,6 @@ In order to include the Charts library:
 
     1. Drag the Charts.xcodeproj (that is inside the Charts folder) to the XCode project
     2. Go to your target's settings, hit the "+" under the "Embedded Binaries" section, and select the Charts.framework
+    
+The file containing the logic and algorithms is situated_sports_vis/mlkit-master/ios/quickstarts/vision/VisionExample/CameraViewController.swift
 
